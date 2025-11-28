@@ -20,9 +20,9 @@ if (Test-Path $settingsFile) {
 }
 
 # Track state to log only on changes
-$script:lastActive = ""
-$script:firstRun = $true
-$script:lastReconnectTime = [DateTime]::MinValue
+$lastActive = ""
+$firstRun = $true
+$lastReconnectTime = [DateTime]::MinValue
 
 function Get-Timestamp {
     return Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -83,21 +83,40 @@ function Show-SettingsDialog {
     $settingsForm.StartPosition = "CenterParent"
     $settingsForm.FormBorderStyle = "FixedDialog"
     $settingsForm.MaximizeBox = $false
-    $settingsForm.MinimizeBox = $false
-    
-    # WiFi SSID
-    $lblSSID = New-Object System.Windows.Forms.Label
-    $lblSSID.Location = New-Object System.Drawing.Point(20, 20)
-    $lblSSID.Size = New-Object System.Drawing.Size(150, 20)
-    $lblSSID.Text = "WiFi SSID:"
-    $settingsForm.Controls.Add($lblSSID)
-    
-    $txtSSID = New-Object System.Windows.Forms.TextBox
-    $txtSSID.Location = New-Object System.Drawing.Point(180, 20)
-    $txtSSID.Size = New-Object System.Drawing.Size(240, 20)
-    $txtSSID.Text = $script:wifiSSID
-    $settingsForm.Controls.Add($txtSSID)
-    
+# Create the form
+$form = New-Object System.Windows.Forms.Form
+$form.Text = "WiFi Failover Monitor"
+$form.Size = New-Object System.Drawing.Size(600, 500)
+$form.StartPosition = "CenterScreen"
+$form.FormBorderStyle = "FixedDialog"
+$form.MaximizeBox = $false
+
+# Menu Strip
+$menuStrip = New-Object System.Windows.Forms.MenuStrip
+$fileMenu = New-Object System.Windows.Forms.ToolStripMenuItem
+$fileMenu.Text = "File"
+
+$settingsMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$settingsMenuItem.Text = "Settings"
+$settingsMenuItem.Add_Click({ Show-SettingsDialog })
+$fileMenu.DropDownItems.Add($settingsMenuItem)
+
+$exitMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
+$exitMenuItem.Text = "Exit"
+$exitMenuItem.Add_Click({ $form.Close() })
+$fileMenu.DropDownItems.Add($exitMenuItem)
+
+$menuStrip.Items.Add($fileMenu)
+$form.Controls.Add($menuStrip)
+$form.MainMenuStrip = $menuStrip
+
+# Status Label
+$statusLabel = New-Object System.Windows.Forms.Label
+$statusLabel.Location = New-Object System.Drawing.Point(20, 35)
+$statusLabel.Size = New-Object System.Drawing.Size(560, 30)
+$statusLabel.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
+$statusLabel.Text = "Status: Initializing..."
+$form.Controls.Add($statusLabel)
     # WiFi Interface
     $lblWiFi = New-Object System.Windows.Forms.Label
     $lblWiFi.Location = New-Object System.Drawing.Point(20, 60)
@@ -162,12 +181,7 @@ function Show-SettingsDialog {
     [void]$settingsForm.ShowDialog()
 }
 
-function Add-Log {
-    param(
-        [string]$message,
-        [string]$color = "Black"
-    )
-    
+function Add-Log($message, $color = "Black") {
     $script:logBox.SelectionStart = $script:logBox.TextLength
     $script:logBox.SelectionLength = 0
     
@@ -183,36 +197,20 @@ function Add-Log {
     $script:logBox.ScrollToCaret()
 }
 
-# Create the form
-$form = New-Object System.Windows.Forms.Form
-$form.Text = "WiFi Failover Monitor"
+# Connection Status Panel
+$statusPanel = New-Object System.Windows.Forms.Panel
+$statusPanel.Location = New-Object System.Drawing.Point(20, 75)
+$statusPanel.Size = New-Object System.Drawing.Size(560, 60)
+$statusPanel.BorderStyle = "FixedSingle"
+$form.Controls.Add($statusPanel)tor"
 $form.Size = New-Object System.Drawing.Size(600, 500)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
 $form.MaximizeBox = $false
 
-# Menu Strip
-$menuStrip = New-Object System.Windows.Forms.MenuStrip
-$fileMenu = New-Object System.Windows.Forms.ToolStripMenuItem
-$fileMenu.Text = "File"
-
-$settingsMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$settingsMenuItem.Text = "Settings"
-$settingsMenuItem.Add_Click({ Show-SettingsDialog })
-$fileMenu.DropDownItems.Add($settingsMenuItem)
-
-$exitMenuItem = New-Object System.Windows.Forms.ToolStripMenuItem
-$exitMenuItem.Text = "Exit"
-$exitMenuItem.Add_Click({ $form.Close() })
-$fileMenu.DropDownItems.Add($exitMenuItem)
-
-$menuStrip.Items.Add($fileMenu)
-$form.Controls.Add($menuStrip)
-$form.MainMenuStrip = $menuStrip
-
 # Status Label
 $statusLabel = New-Object System.Windows.Forms.Label
-$statusLabel.Location = New-Object System.Drawing.Point(20, 35)
+$statusLabel.Location = New-Object System.Drawing.Point(20, 20)
 $statusLabel.Size = New-Object System.Drawing.Size(560, 30)
 $statusLabel.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
 $statusLabel.Text = "Status: Initializing..."
@@ -220,25 +218,6 @@ $form.Controls.Add($statusLabel)
 
 # Connection Status Panel
 $statusPanel = New-Object System.Windows.Forms.Panel
-$statusPanel.Location = New-Object System.Drawing.Point(20, 75)
-$statusPanel.Size = New-Object System.Drawing.Size(560, 60)
-$statusPanel.BorderStyle = "FixedSingle"
-$form.Controls.Add($statusPanel)
-
-$wifiStatusLabel = New-Object System.Windows.Forms.Label
-$wifiStatusLabel.Location = New-Object System.Drawing.Point(10, 10)
-$wifiStatusLabel.Size = New-Object System.Drawing.Size(270, 40)
-$wifiStatusLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-$wifiStatusLabel.Text = "WiFi: Checking..."
-$statusPanel.Controls.Add($wifiStatusLabel)
-
-$usbStatusLabel = New-Object System.Windows.Forms.Label
-$usbStatusLabel.Location = New-Object System.Drawing.Point(290, 10)
-$usbStatusLabel.Size = New-Object System.Drawing.Size(260, 40)
-$usbStatusLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10)
-$usbStatusLabel.Text = "USB: Checking..."
-$statusPanel.Controls.Add($usbStatusLabel)
-
 # Log Box
 $logLabel = New-Object System.Windows.Forms.Label
 $logLabel.Location = New-Object System.Drawing.Point(20, 145)
@@ -248,6 +227,25 @@ $form.Controls.Add($logLabel)
 
 $logBox = New-Object System.Windows.Forms.RichTextBox
 $logBox.Location = New-Object System.Drawing.Point(20, 170)
+$logBox.Size = New-Object System.Drawing.Size(560, 250)
+$logBox.ReadOnly = $true
+$logBox.Font = New-Object System.Drawing.Font("Consolas", 9)
+$logBox.BackColor = [System.Drawing.Color]::White
+$form.Controls.Add($logBox)New-Object System.Drawing.Point(290, 10)
+$usbStatusLabel.Size = New-Object System.Drawing.Size(260, 40)
+$usbStatusLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+$usbStatusLabel.Text = "USB: Checking..."
+$statusPanel.Controls.Add($usbStatusLabel)
+
+# Log Box
+$logLabel = New-Object System.Windows.Forms.Label
+$logLabel.Location = New-Object System.Drawing.Point(20, 130)
+$logLabel.Size = New-Object System.Drawing.Size(100, 20)
+$logLabel.Text = "Activity Log:"
+$form.Controls.Add($logLabel)
+
+$logBox = New-Object System.Windows.Forms.RichTextBox
+$logBox.Location = New-Object System.Drawing.Point(20, 155)
 $logBox.Size = New-Object System.Drawing.Size(560, 250)
 $logBox.ReadOnly = $true
 $logBox.Font = New-Object System.Drawing.Font("Consolas", 9)
@@ -294,11 +292,6 @@ $clearButton.Add_Click({
     $logBox.Clear()
 })
 $form.Controls.Add($clearButton)
-
-# Timer for monitoring
-$timer = New-Object System.Windows.Forms.Timer
-$timer.Interval = 3000  # 3 seconds
-$script:running = $false
 
 $timer.Add_Tick({
     if (-not $script:running) { return }
@@ -366,8 +359,14 @@ $timer.Add_Tick({
         Set-Metrics 1 100
         $script:lastActive = "unknown"
     }
-})
-
+})          Add-Log "[$timestamp] Unknown route detected - Defaulting to WiFi" "Cyan"
+        }
+# Initial message
+Add-Log "========================================" "Cyan"
+Add-Log "  WiFi Failover Monitor" "Cyan"
+if ($script:wifiSSID -eq "YOUR_WIFI_SSID") {
+    Add-Log "  Please configure settings (File -> Settings)" "Yellow"
+} else {
 # Initial message
 Add-Log "========================================" "Cyan"
 Add-Log "  WiFi Failover Monitor" "Cyan"
