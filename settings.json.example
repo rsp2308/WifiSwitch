@@ -1,0 +1,5 @@
+{
+  "WiFiSSID": "YOUR_WIFI_SSID",
+  "WiFiInterface": "Wi-Fi",
+  "USBInterface": "Ethernet 2"
+}
