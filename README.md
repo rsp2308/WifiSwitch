@@ -49,7 +49,7 @@ Edit these variables in the `.ps1` files to match your setup:
 ```powershell
 $wifi = "Wi-Fi"              # Your WiFi interface name
 $usb = "Ethernet 2"          # Your USB tethering interface name
-$wifiSSID = "AARAV PG 2F 5G" # Your WiFi network name
+$wifiSSID = "LPU Wireless" # Your WiFi network name
 ```
 
 ## Requirements
